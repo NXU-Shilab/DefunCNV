@@ -1,0 +1,4 @@
+Chromosome,Start,End,Type,end-start,Locus,Affected gene,NDD phenotype,Review_Reference,hg
+22,18970514,19031242,loss,60729,22q11.2,DGCR5,SCZ,"76,77",GRCh38
+2,7918076,7977796,loss,59721,2p25.1,LINC00299,"DD,ID",81,GRCh38
+21,40644263,40658399,loss,14137,21q22.2,DSCAM,ASD,10,GRCh38

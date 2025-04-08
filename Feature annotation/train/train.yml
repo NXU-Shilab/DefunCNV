@@ -1,0 +1,73 @@
+---
+ops: [train]
+model: {
+    path: ../model/cnn_with_swin.py,
+    class: Sei_2d_with_Swin,
+    class_args: {
+        sequence_length: 98304,
+        n_genomic_features: 552,
+    },
+    non_strand_specific: mean
+}
+sampler: !obj:selene_sdk.samplers.MultiSampler {
+    train_sampler: !obj:selene_sdk.samplers.dataloader.SamplerDataLoader {
+        sampler: !obj:selene_sdk.samplers.RandomPositionsSampler {
+            target_path: ./data/sorted_brain.bed.gz,
+            reference_sequence: !obj:selene_sdk.sequences.Genome {
+                input_path: ../resources/hg38_UCSC.fa,
+                blacklist_regions: hg38
+            },
+            features: !obj:selene_sdk.utils.load_features_list {
+                input_path: ./data/brain_chromatin_profiles.txt
+            },
+            test_holdout: [chr8, chr9],
+            validation_holdout: [chr10],
+            sequence_length: 98304,
+            center_bin_to_predict: [49152, 49153],
+            feature_thresholds: null,
+            save_datasets: []
+        },
+        num_workers: 16,
+        batch_size: 128,
+    },
+    validate_sampler: !obj:selene_sdk.samplers.RandomPositionsSampler {
+        target_path: ./data/sorted_brain.bed.gz,
+        reference_sequence: !obj:selene_sdk.sequences.Genome {
+            input_path: ../resources/hg38_UCSC.fa,
+            blacklist_regions: hg38
+        },
+        features: !obj:selene_sdk.utils.load_features_list {
+            input_path: ./data/brain_chromatin_profiles.txt
+        },
+        test_holdout: [chr8, chr9],
+        validation_holdout: [chr10],
+        sequence_length: 98304,
+        center_bin_to_predict: [49152, 49153],
+        mode: validate,
+        save_datasets: ['validate'],
+        output_dir: ./cnn_with_swin_validate_data_12800
+    },
+    features: !obj:selene_sdk.utils.load_features_list {
+        input_path:  ./data/brain_chromatin_profiles.txt
+    }
+}
+train_model: !obj:selene_sdk.TrainModel {
+    batch_size: 128,
+    report_stats_every_n_steps: 1000,
+    n_validation_samples: 12800,
+    n_test_samples: 50000,
+    use_cuda: True,
+    data_parallel: True, #we recommend multi-GPU training only on NVLink-enabled GPUs
+    cpu_n_threads: 19,
+    report_gt_feature_n_positives: 5,
+    use_scheduler: False,
+    max_steps: 1000000000,
+    metrics: {
+        roc_auc: !import sklearn.metrics.roc_auc_score,
+        average_precision: !import sklearn.metrics.average_precision_score
+    },
+    #checkpoint_resume: ./models/cnn_with_swin_best_model_0.959/checkpoint.pth.tar,
+}
+output_dir: ./models 
+random_seed: 1447
+...
