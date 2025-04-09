@@ -1,40 +1,46 @@
 import h5py
 import numpy as np
 import pandas as pd
-import torch
-from sklearn.ensemble import RandomForestRegressor
-import joblib  
+import joblib
+import argparse
 
-# Load new data for prediction
-data_file = "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3_log2_scores_LR.h5"
+def predict(data_file, model_path, best_threshold_path, output_file):
+    
+    with h5py.File(data_file, 'r') as f:
+        data = f['log2_scores'][:]
 
-with h5py.File(data_file, 'r') as f:
-    data = f['log2_scores'][:]  # Replace 'data' with the correct dataset name in the HDF5 file
+    data = np.asarray(data, dtype=np.float32)
 
-# Ensure that the data is a NumPy array
-data = np.asarray(data, dtype=np.float32)
+    # Load optimal threshold
+    best_threshold = np.load(best_threshold_path)
+    print(f"Best threshold loaded: {best_threshold}")
 
-# Load the best model 
-best_model_path = "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/five_fold_dataset_0.956_best_model/673_LR_five_fold_data/five_fold_best_param/rf_best_models/fold_2_best_model_rf.pkl"
+    # Load the trained model
+    model = joblib.load(model_path)
 
-# Load the best threshold from file
-best_threshold_path = "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/five_fold_dataset_0.956_best_model/673_LR_five_fold_data/five_fold_best_param/best_threshold_fold_2.npy"
-best_threshold = np.load(best_threshold_path)
-print(best_threshold)
+    # Obtain the predicted probability of the model
+    predictions = model.predict_proba(data)[:, 1]
 
-# Load the pre-trained Random Forest model
-model = joblib.load(best_model_path) 
+    # The best threshold was used to classify the prediction results
+    predictions_labels = (predictions >= best_threshold).astype(int)
 
-predictions = model.predict_proba(data)[:, 1]
+    # Save predict results as CSV files
+    predictions_df = pd.DataFrame(predictions_labels, columns=['Predicted_Label'])
+    predictions_df['Predicted_Score'] = predictions.round(3)
+    predictions_df['Best_Threshold'] = best_threshold
 
-# Use the best threshold to classify predictions
-predictions_labels = (predictions >= best_threshold).astype(int)
+    predictions_df.to_csv(output_file, index=False)
 
-# Save predictions to a CSV file
-predictions_df = pd.DataFrame(predictions_labels, columns=['Predicted_Label']) 
-predictions_df['Predicted_Score'] = predictions.round(3)
-# Add the best_threshold to the dataframe (it's a constant for all rows)
-predictions_df['Best_Threshold'] = best_threshold
-predictions_df.to_csv("/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/673LR_rf_best_model_review_case_hg38_3_predictions.csv", index=False)
+    print(f"Predictions saved to {output_file}.")
 
-print("Predictions saved to csv.")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Predict pathogenicity using pre-trained model")
+    parser.add_argument('--data_file', type=str, required=True, help="Path to the input data (log2 scores HDF5 file)")
+    parser.add_argument('--model_path', type=str, required=True, help="Path to the trained model file")
+    parser.add_argument('--best_threshold_path', type=str, required=True, help="Path to the best threshold file")
+    parser.add_argument('--output_file', type=str, required=True, help="Path to save predictions CSV file")
+
+    args = parser.parse_args()
+    
+    # predict
+    predict(args.data_file, args.model_path, args.best_threshold_path, args.output_file)

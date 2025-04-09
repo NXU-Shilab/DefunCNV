@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from Bio import SeqIO
 import random
-
+import argparse
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
@@ -105,9 +105,9 @@ def extract_alt_sequence(genome_file, excel_file, output_fa_file):
     print(f"Total sequences written: {len(alt_sequences)}")
 
 
-extract_alt_sequence("/mnt/data0/users/baiy/CNV/resources/hg38_UCSC.fa",
-                     "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3.csv",
-                     "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3_alt_sequence.fa")
+# extract_alt_sequence("/mnt/data0/users/baiy/CNV/resources/hg38_UCSC.fa",
+#                      "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3.csv",
+#                      "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3_alt_sequence.fa")
 
 
 # print(len(extracted_sequences))
@@ -175,8 +175,24 @@ def extract_ref_sequence(genome_file, excel_file, output_fa_file):
     print(f"Total sequences written: {len(ref_sequences)}")
 
 
-extract_ref_sequence("/mnt/data0/users/baiy/CNV/resources/hg38_UCSC.fa",
-                     "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3.csv",
-                     "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3_ref_sequence.fa")
+# extract_ref_sequence("/mnt/data0/users/baiy/CNV/resources/hg38_UCSC.fa",
+#                      "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3.csv",
+#                      "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3_ref_sequence.fa")
+def main():
+    # Set command line parameters
+    parser = argparse.ArgumentParser(description="Generate FASTA sequences")
+    parser.add_argument("ref_fasta", help="Path to the reference genome fasta file")
+    parser.add_argument("csv_file", help="Path to the CSV file containing variant data")
+    parser.add_argument("alt_sequence", help="Path to save the generated alt sequence fasta")
+    parser.add_argument("ref_sequence", help="Path to save the generated ref sequence fasta")
+
+    args = parser.parse_args()
+
+    # Call function to generate FASTA file
+    extract_alt_sequence(args.ref_fasta, args.csv_file, args.alt_sequence)
+    extract_ref_sequence(args.ref_fasta, args.csv_file, args.ref_sequence)
+
+if __name__ == "__main__":
+    main()
 
 print("Extract Finished")

@@ -11,7 +11,7 @@ from Bio import SeqIO
 import os, sys
 model_path = os.path.abspath(os.path.join('/mnt/data0/users/baiy/CNV/code/model/'))
 sys.path.append(model_path)
-from train_predict.cnn_with_swin import Sei_2d_with_Swin
+from model.cnn_with_swin import Sei_2d_with_Swin
 
 def set_seed(seed):
     random.seed(seed)
@@ -66,9 +66,23 @@ def save_predictions(predictions, output_path):
 
 
 def main():
-    model_path = "/mnt/data0/users/baiy/CNV/code/model/best_model/best_model.pth.tar"
-    data_path = "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3_alt_sequence.fa"
-    output_path = "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3_alt_sequence_predictions.h5"
+    # model_path = "/mnt/data0/users/baiy/CNV/code/model/best_model/best_model.pth.tar"
+    # data_path = "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3_alt_sequence.fa"
+    # output_path = "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3_alt_sequence_predictions.h5"
+    parser = argparse.ArgumentParser(description="Feature annotation for sequences")
+    
+    # Set command line parameters
+    parser.add_argument('--model_path', required=True, help="Path to the trained model")
+    parser.add_argument('--data_path', required=True, help="Path to the input sequence file (FASTA)")
+    parser.add_argument('--output_path', required=True, help="Path to save the output prediction (.h5)")
+    parser.add_argument('--cuda', action='store_true', help="Flag to use CUDA")
+
+    args = parser.parse_args()
+
+    model_path = args.model_path
+    data_path = args.data_path
+    output_path = args.output_path
+    use_cuda = args.cuda
     batch_size = 1
 
     model = Sei_2d_with_Swin()
