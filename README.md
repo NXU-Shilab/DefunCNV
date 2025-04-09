@@ -1,24 +1,16 @@
 # **DefunCNV**
 
-***
-
 Welcome to the `DefunCNV` framework repository! `DefunCNV` is a novel deep learning framework that enables precise annotation of brain related cis-regulatory elements and accurately predict the pathogenicity of functional noncoding CNVs in brain disorders.
 
 # **Requirements**
-
-***
 
 Please create a new conda environment specifically for running `DefunCNV` (e.g. `conda create --DefunCNV python=3.8.20`), install the packages listed in the `requirements.txt` file. Install with conda or pip (e.g. `conda install pandas==2.0.3`).
 
 # **Setup**
 
-***
-
 Please click [here](https://drive.google.com/file/d/147NZIWe5B5u1yHluOsXIS1yvuSsRGZQR/view?usp=drive_link) to download and extract the trained `DefunCNV` model and  human reference genome files (containing hg19 and hg38 FASTA files) before proceeding:
 
 # **Feature annotation**
-
-***
 
 The following scripts can be used to obtain feature annotations of DefunCNV for CNVs.
 
@@ -66,8 +58,6 @@ The output will be saved to output\_dir, the first column of the output is the p
 
 # **Training**
 
-***
-
 ### **Feature annotation model training**
 
 The configuration file and script for running train is under the `Feature annotation/train` directory. To run DefunCNV deep learning feature annotation model training, you will need GPU computing capability (we run training on 6x NVIDIA GeForce 3090 GPUs).
@@ -101,7 +91,5 @@ Arguments:
 python your\_script\_name.py.
 
 # **Help**
-
-***
 
 Please post in the Github issues or e-mail Fangyuan Shi (<shify@nxu.edu.cn>) with any questions about the repository, requests for more data, additional information about the results, etc.
