@@ -51,8 +51,8 @@ The log2 scores with LR will be saved to output\_dir.
 Arguments:
 
 *   `h5_file> `: H5 file path with log2 score of LR.
-*   `<best_model_path> `: Path to the DefunCNV bset model.
-*   `<best_threshold> `: Path to the DefunCNV bset threshold.
+*   `<best_model_path> `: Path to the DefunCNV best model.
+*   `<best_threshold> `: Path to the DefunCNV best threshold.
 *   `<output_dir> `: Path to pathogenicity predictions of for CNVs output directory.
 
 The output will be saved to output\_dir, the first column of the output is the predicted class, the second column is the predicted score, and the last column is the best\_threshold.
