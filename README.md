@@ -8,7 +8,7 @@ Please create a new conda environment specifically for running `DefunCNV` (e.g
 
 # **Setup**
 
-Please click [here](https://drive.google.com/file/d/147NZIWe5B5u1yHluOsXIS1yvuSsRGZQR/view?usp=drive_link) to download and extract the trained `DefunCNV` model and  human reference genome files (containing hg19 and hg38 FASTA files) before proceeding:
+Please click [here](https://doi.org/10.5281/zenodo.22396869) to download and extract the trained `DefunCNV` model and  human reference genome files (containing hg19 and hg38 FASTA files) before proceeding:
 
 # **Feature annotation**
 
