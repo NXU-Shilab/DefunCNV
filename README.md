@@ -40,8 +40,8 @@ Arguments:
 
 *   `<ref_annotation> `: ref sequence prediction h5 file.
 *   `<alt_annotation> `: alt sequence prediction h5 file.
-*   `<csv_file1> `: CSV file.
-*   `<csv_file2> `: XCNV prediction CSV file.
+*   `<csv_file1> `: the original CNV CSV you passed to `annotate.sh`.
+*   `<csv_file2> `: the XCNV LR-score prediction CSV.
 *   `<output_dir> `: H5 file path with log2 score of LR.
 
 The log2 scores with LR will be saved to output\_dir.
