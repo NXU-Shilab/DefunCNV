@@ -16,13 +16,14 @@ The following scripts can be used to obtain feature annotations of DefunCNV for 
 
 Example usage:
 
-`sh annotate.sh <csv_file> <ref_fasta> <output_dir> [--cuda] `
+`sh annotate.sh <csv_file> <ref_fasta> <output_dir> <model_path> [--cuda]`
 
 Arguments:
 
-*   `  <csv_file>  `: CSV file.
+*   `  <csv_file>  `: CNV input CSV. **Required columns:** `Chromosome` (without a `chr` prefix, e.g. `1`), `Start`, `End`, `Type`. `Type` must be `gain` (duplication) or `loss` (deletion).
 *   `  <ref_fasta>  `: Either hg19 or hg38 human reference genome.
-*   `  <output_dir>  `: Path to feature annotation output directory.
+*   `  <output_dir>  `: Directory where the intermediate FASTA files and the output `.h5` predictions are saved.
+*   `  <model_path>  `: Path to the trained DefunCNV model (`best_model.pth.tar`) downloaded above.
 *   `  --cuda  `: Optional, use this flag if running on a CUDA-enabled GPU.
 
 The `  alt_sequence_predictions.h5  `and the `  ref_sequence_predictions.h5  `will be saved to output\_dir. There are 552 columns in the h5 file, and each column represents the predicted probability of a feature on each variant
@@ -62,7 +63,7 @@ The output will be saved to output\_dir, the first column of the output is the p
 
 The configuration file and script for running train is under the `Feature annotation/train` directory. To run DefunCNV deep learning feature annotation model training, you will need GPU computing capability (we run training on 6x NVIDIA GeForce 3090 GPUs).
 
-The training data is available [here](https://drive.google.com/file/d/1NnO1VtgHGLagnzAPMa4b2_MAW1PyGnJB/view?usp=drive_link) should be downloaded and extracted into the `train` directory.
+The training data is available [here](https://doi.org/10.5281/zenodo.22396868) should be downloaded and extracted into the `train` directory.
 
 The DefunCNV feature annotation model training configuration YAML file is provided as the `train/train.yml` file. You can read more about the Selene command-line interface and configuration file formatting [here](https://selene.flatironinstitute.org/master/overview/cli.html#).
 
