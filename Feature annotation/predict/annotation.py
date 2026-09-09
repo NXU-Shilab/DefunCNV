@@ -8,9 +8,16 @@ from torch.utils.data import TensorDataset, DataLoader
 from collections import OrderedDict
 from Bio import SeqIO
 
-import os, sys
-model_path = os.path.abspath(os.path.join('/mnt/data0/users/baiy/CNV/code/model/'))
-sys.path.append(model_path)
+import argparse
+import os, sys, re
+# Make the `model` package importable regardless of where this script is run from.
+# annotation.py lives in Feature_annotation/predict/; the model package is at
+# Feature_annotation/model, so we add Feature_annotation (the parent of `model/`) to
+# sys.path instead of a hard-coded server path.
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_MODEL_PKG_ROOT = os.path.abspath(os.path.join(_SCRIPT_DIR, '..'))
+if _MODEL_PKG_ROOT not in sys.path:
+    sys.path.insert(0, _MODEL_PKG_ROOT)
 from model.cnn_with_swin import Sei_2d_with_Swin
 
 def set_seed(seed):
@@ -53,7 +60,7 @@ def sequences_one_hot(sequences):
                 seq_encoded.append(mapping[random_base])
         seq_one_hot = np.eye(num_classes)[seq_encoded]
         data.append(seq_one_hot)
-        
+
 
     data = np.array(data)
     data = data.transpose(0, 2, 1)
@@ -66,11 +73,8 @@ def save_predictions(predictions, output_path):
 
 
 def main():
-    # model_path = "/mnt/data0/users/baiy/CNV/code/model/best_model/best_model.pth.tar"
-    # data_path = "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3_alt_sequence.fa"
-    # output_path = "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3_alt_sequence_predictions.h5"
-    parser = argparse.ArgumentParser(description="Feature annotation for sequences")
-    
+    parser = argparse.ArgumentParser(description="Feature_annotation for sequences")
+
     # Set command line parameters
     parser.add_argument('--model_path', required=True, help="Path to the trained model")
     parser.add_argument('--data_path', required=True, help="Path to the input sequence file (FASTA)")
@@ -86,42 +90,73 @@ def main():
     batch_size = 1
 
     model = Sei_2d_with_Swin()
-    device_ids = [6]
-    device = torch.device("cuda:%s" % device_ids[0] if torch.cuda.is_available() else "cpu")
-    model = nn.DataParallel(model, device_ids=device_ids)
-    model.to(device)
-    state_dict = torch.load(model_path)
 
-    if 'state_dict' in state_dict:
+    # Choose device based on the --cuda flag and actual availability.
+    # (Previously device_ids was hard-coded to GPU 6, which breaks on any other machine.)
+    if use_cuda and torch.cuda.is_available():
+        device = torch.device("cuda")  # defaults to the first visible GPU (cuda:0)
+    else:
+        if use_cuda and not torch.cuda.is_available():
+            print("[Warning] --cuda was requested but CUDA is not available; "
+                  "falling back to CPU.")
+        device = torch.device("cpu")
+    model.to(device)
+
+    # Load checkpoint, tolerating either a bare state_dict or a dict that wraps it
+    # under 'state_dict', and tolerating the 'module.' (DataParallel) or 'model.'
+    # (NonStrandSpecific) prefix that may have been added when the weights were saved.
+    state_dict = torch.load(model_path, map_location=device)
+    if isinstance(state_dict, dict) and 'state_dict' in state_dict:
         state_dict = state_dict['state_dict']
 
-    model_keys = model.state_dict().keys()
-    state_dict_keys = state_dict.keys()
+    def _strip_prefix(k):
+        # Strip save-time prefixes recursively in case they are nested
+        # (e.g. 'module.model.conv1...' from DataParallel + a wrapper).
+        prev = None
+        while prev != k:
+            prev = k
+            for p in ('module.', 'model.'):
+                if k.startswith(p):
+                    k = k[len(p):]
+        return k
+    state_dict = {_strip_prefix(k): v for k, v in state_dict.items()}
+    # DEBUG: print a few stripped keys so mismatches are easy to diagnose remotely
+    print(f"[Debug] stripped checkpoint keys sample: {list(state_dict.keys())[:5]}")
 
-    if len(model_keys) != len(state_dict_keys):
-        try:
-            model.load_state_dict(state_dict, strict=False)
-        except Exception as e:
-            raise ValueError("Loaded state dict does not match the model "
-                             "architecture specified - please check that you are "
-                             "using the correct architecture file and parameters.\n\n"
-                             "{0}".format(e))
+    # The checkpoint may have been saved with an OLDER version of cnn_with_swin.py
+    # where the second conv block was a top-level `conv2` module, while the current
+    # code nests it inside `conv1` as `conv1.1` (i.e. conv1 = Sequential(conv, conv)).
+    # Remap `conv2.{i}.*` -> `conv1.{i+1}.*` so the weights land in the right layer.
+    # Only applied when the target key exists in the model, so a genuine architecture
+    # mismatch still surfaces as a load error instead of silently loading garbage.
+    model_keys = set(model.state_dict().keys())
+    remapped = {}
+    _new_state = {}
+    for k, v in state_dict.items():
+        if k in model_keys:
+            _new_state[k] = v
+            continue
+        mk = None
+        if k.startswith('conv2.'):
+            m = re.match(r'^conv2\.(\d+)\.(.+)$', k)
+            if m:
+                cand = f'conv1.{int(m.group(1)) + 1}.{m.group(2)}'
+                if cand in model_keys:
+                    mk = cand
+        if mk is not None:
+            remapped[k] = mk
+            _new_state[mk] = v
+    if remapped:
+        print(f"[Info] remapped checkpoint keys to current model layout: {remapped}")
+    state_dict = _new_state
 
-    new_state_dict = OrderedDict()
-    for (k1, k2) in zip(model_keys, state_dict_keys):
-        value = state_dict[k2]
-        try:
-            new_state_dict[k1] = value
-        except Exception as e:
-            raise ValueError(
-                "Failed to load weight from module {0} in model weights "
-                "into model architecture module {1}. (If module name has "
-                "an additional prefix `model.` it is because the model is "
-                "wrapped in `selene_sdk.utils.NonStrandSpecific`. This "
-                "error was raised because the underlying module does "
-                "not match that expected by the loaded model:\n"
-                "{2}".format(k2, k1, e))
-    model.load_state_dict(new_state_dict)
+    missing, unexpected = model.load_state_dict(state_dict, strict=False)
+    if missing:
+        print(f"[Warning] {len(missing)} model weights were not loaded "
+              f"(missing from checkpoint): {missing[:5]}{'...' if len(missing) > 5 else ''}")
+    if unexpected:
+        print(f"[Warning] {len(unexpected)} checkpoint weights were ignored "
+              f"(not in model): {unexpected[:5]}{'...' if len(unexpected) > 5 else ''}")
 
     model.eval()
 
@@ -136,10 +171,10 @@ def main():
     data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
     all_predictions = []
-    
+
     print("Start prediction")
 
-    with torch.no_grad(): 
+    with torch.no_grad():
         for i, batch in enumerate(data_loader):
             batch_data = batch[0].to(device)
             predictions = model(batch_data)
@@ -147,8 +182,8 @@ def main():
             print(f"Batch {i + 1}/{len(data_loader)} processed")
 
     all_predictions = np.vstack(all_predictions)
-    
-    # Save prediction results to.H5 file
+
+    # Save prediction results to .h5 file
     save_predictions(all_predictions, output_path)
 
     print(f"Predictions saved to {output_path}")

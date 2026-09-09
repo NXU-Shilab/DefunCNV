@@ -31,11 +31,7 @@ def extract_alt_sequence(genome_file, excel_file, output_fa_file):
         start = int(row['Start'])
         end = int(row['End'])
         variant_type = row['Type']
-        end_start_length = int(row['end-start'])
         sequence_length_needed = 98304
-
-        # if chrom in genome:
-        #     chromosome_seq = genome[chrom].seq
 
         if "chr" + chrom in genome:
             chromosome_seq = genome["chr" + chrom].seq
@@ -94,8 +90,14 @@ def extract_alt_sequence(genome_file, excel_file, output_fa_file):
                 right_sequence = chromosome_seq[end:new_end]
                 new_sequence = left_sequence + right_sequence
                 alt_sequences.append(str(new_sequence))
+            else:
+                print(f"[Warning] Row {index}: unknown Type '{variant_type}' "
+                      f"(expected 'gain' or 'loss'); skipping.")
+        else:
+            print(f"[Warning] Chromosome 'chr{chrom}' not found in the reference "
+                  f"genome; skipping row {index}.")
 
-        # Save the extracted sequence to a.Fa file
+    # Save the extracted sequence to a .fa file
     with open(output_fa_file, "w") as output_handle:
         for i, seq in enumerate(alt_sequences):
             print(f"Sequence {i} length: {len(seq)}")
@@ -103,14 +105,6 @@ def extract_alt_sequence(genome_file, excel_file, output_fa_file):
             SeqIO.write(seq_record, output_handle, "fasta")
 
     print(f"Total sequences written: {len(alt_sequences)}")
-
-
-# extract_alt_sequence("/mnt/data0/users/baiy/CNV/resources/hg38_UCSC.fa",
-#                      "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3.csv",
-#                      "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3_alt_sequence.fa")
-
-
-# print(len(extracted_sequences))
 
 
 def extract_ref_sequence(genome_file, excel_file, output_fa_file):
@@ -128,7 +122,6 @@ def extract_ref_sequence(genome_file, excel_file, output_fa_file):
 
     genome = SeqIO.to_dict(SeqIO.parse(genome_file, "fasta"))
 
-
     df = pd.read_csv(excel_file)
 
     ref_sequences = []
@@ -139,11 +132,13 @@ def extract_ref_sequence(genome_file, excel_file, output_fa_file):
         start = int(row['Start'])
         end = int(row['End'])
         variant_type = row['Type']
-        end_start_length = int(row['end-start'])
         sequence_length_needed = 98304
 
-        # if chrom in genome:
-        #     chromosome_seq = genome[chrom].seq
+        # Skip the same rows that extract_alt_sequence skips, so ref/alt FASTAs stay 1:1.
+        if variant_type not in ('gain', 'loss'):
+            print(f"[Warning] Row {index}: unknown Type '{variant_type}' "
+                  f"(expected 'gain' or 'loss'); skipping.")
+            continue
 
         if "chr" + chrom in genome:
             chromosome_seq = genome["chr" + chrom].seq
@@ -164,8 +159,11 @@ def extract_ref_sequence(genome_file, excel_file, output_fa_file):
                             mid_pos + sequence_length_needed // 2 - len(chromosome_seq))
             new_sequence = chromosome_seq[new_start:new_end]
             ref_sequences.append(str(new_sequence))
+        else:
+            print(f"[Warning] Chromosome 'chr{chrom}' not found in the reference "
+                  f"genome; skipping row {index}.")
 
-    # # Save the extracted sequence to a.Fa file
+    # Save the extracted sequence to a .fa file
     with open(output_fa_file, "w") as output_handle:
         for i, seq in enumerate(ref_sequences):
             print(f"Sequence {i} length: {len(seq)}")
@@ -175,9 +173,6 @@ def extract_ref_sequence(genome_file, excel_file, output_fa_file):
     print(f"Total sequences written: {len(ref_sequences)}")
 
 
-# extract_ref_sequence("/mnt/data0/users/baiy/CNV/resources/hg38_UCSC.fa",
-#                      "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3.csv",
-#                      "/mnt/data0/users/baiy/CNV/data/Brain_CNV_data/review_case/review_case_hg38_3_ref_sequence.fa")
 def main():
     # Set command line parameters
     parser = argparse.ArgumentParser(description="Generate FASTA sequences")
@@ -191,6 +186,7 @@ def main():
     # Call function to generate FASTA file
     extract_alt_sequence(args.ref_fasta, args.csv_file, args.alt_sequence)
     extract_ref_sequence(args.ref_fasta, args.csv_file, args.ref_sequence)
+
 
 if __name__ == "__main__":
     main()
