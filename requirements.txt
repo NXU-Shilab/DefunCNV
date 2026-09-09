@@ -1,6 +1,7 @@
 docopt==0.6.2
-selene==1.0.2
 selene-sdk==0.5.1
+selene==1.0.2
+biopython==1.79
 bio==1.6.2
 matplotlib==3.7.3
 numpy==1.23.3
@@ -14,3 +15,5 @@ h5py==3.9.0
 pybedtools==0.9.1
 optuna==4.0.0
 scanpy==1.9.8
+timm==0.4.12
+einops==0.4.1
